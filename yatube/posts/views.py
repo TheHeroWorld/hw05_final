@@ -42,9 +42,11 @@ def profile(request, username):
     template = 'posts/profile.html'
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
+    following = Follow.objects.filter(user=request.user.id, author=author)
     context = {
         'author': author,
-        'page_obj': get_model_info(request, posts)
+        'page_obj': get_model_info(request, posts),
+        'following': following
     }
     return render(request, template, context)
 
