@@ -104,6 +104,7 @@ def add_comment(request, post_id):
         comment.save()
     return redirect('posts:post_detail', post_id=post_id)
 
+
 @login_required
 def follow_index(request):
     posts_list = Post.objects.filter(
