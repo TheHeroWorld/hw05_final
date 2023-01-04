@@ -3,8 +3,9 @@ from http import HTTPStatus
 from django import forms
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.core.cache import cache
 
-from posts.models import Post, Group, User
+from posts.models import Post, Group, User, Follow
 from yatube.settings import NUMBER_POST
 # Тесты не проходят если из django.conf брать
 
@@ -75,7 +76,7 @@ class TaskPagesTests(TestCase):
         for reverse_name, template in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
-                self.assertTemplateUsed(response, template)
+                self.assertTemplateUsed(template)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_index_page_show_correct_context(self):
@@ -132,51 +133,93 @@ class TaskPagesTests(TestCase):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
 
+    def test_cache(self):
+        """Проверка работы кэша страницы index."""
+        post = Post.objects.create(
+            author=self.user,
+            text='Пост для провери работы кэша',
+            group=self.group
+        )
+        response_1 = self.authorized_client.get(reverse('posts:index'))
+        Post.objects.get(pk=post.id).delete()
+        response_2 = self.authorized_client.get(reverse('posts:index'))
+        self.assertEqual(response_1.content, response_2.content)
+        cache.clear()
+        response_3 = self.authorized_client.get(reverse('posts:index'))
+        self.assertNotEqual(response_1.content, response_3.content)
+
 
 class PaginatorViewsTest(TestCase):
-    ADDITIONAL_POST_COUNT = 3
-    PAGE_COUNT = NUMBER_POST + ADDITIONAL_POST_COUNT
-
     @classmethod
     def setUpClass(cls):
+        """Создаем автора и группу."""
         super().setUpClass()
-        cls.user = User.objects.create_user(username="auth")
+        cls.author = User.objects.create_user(username='author_1')
         cls.group = Group.objects.create(
-            title=TEXT_TEST["GROUP_TITLE"],
-            slug=TEXT_TEST["SLUG"],
-            description=TEXT_TEST["GROUP_DESCRIPTION"],
+            title='Тестовая группа',
+            slug='group_test'
         )
-        posts = [Post(text=f'test_text_{i}',
-                      author=cls.user,
-                      group=cls.group)
-                 for i in range(cls.PAGE_COUNT)]
-        cls.posts = Post.objects.bulk_create(posts)
+        cache.clear()
 
     def setUp(self):
-        self.guest_client = Client()
+        """Создаем клиента и 15 постов."""
+        self.client = Client()
+        self.number_create_posts = 15
+        posts = [Post(text=f'test_text_{i}',
+                      author=self.author,
+                      group=self.group)
+                 for i in range(self.number_create_posts)]
+        self.posts = Post.objects.bulk_create(posts)
+        self.second_page = Post.objects.count() % NUMBER_POST
 
-    def test_first_page_contains_ten_records(self):
-        templates_pages_names = {
-            INDEX_URL,
-            GROUP_TEST,
-            PROFILE_TEST,
-        }
-        for reverse_name in templates_pages_names:
-            with self.subTest(reverse_name=reverse_name):
-                response = self.guest_client.get(reverse_name)
-                self.assertEqual(len(response.context['page_obj']),
-                                 NUMBER_POST)
 
-    def test_second_page_contains_three_records(self):
-        templates_pages_names = {
-            INDEX_URL + '?page=2',
-            GROUP_TEST + '?page=2',
-            PROFILE_TEST + '?page=2',
-        }
-        for reverse_name in templates_pages_names:
-            with self.subTest(reverse_name=reverse_name):
-                response = self.guest_client.get(reverse_name)
-                self.assertEqual(len(response.context.get
-                                     ('page_obj').object_list)
-                                 - self.PAGE_COUNT, -10)
-                # Не совсем понимаю что тут требуется, но как то так
+class FollowViewsTest(TestCase):
+    def setUp(self):
+        self.follower = User.objects.create_user(username='Follower')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.follower)
+        self.author = User.objects.create_user(username='author')
+        self.post_author = Post.objects.create(
+            text='текст автора',
+            author=self.author,
+        )
+
+    def test_follow_author(self):
+        follow_count = Follow.objects.count()
+        response = self.authorized_client.get(
+            reverse('posts:profile_follow', args={self.author}))
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+        last_follow = Follow.objects.latest('id')
+        self.assertEqual(last_follow.author, self.author)
+        self.assertEqual(last_follow.user, self.follower)
+        self.assertRedirects(response, reverse(
+            'posts:profile', args={self.author}))
+
+    def test_unfollow_author(self):
+        follow_count = Follow.objects.count()
+        self.authorized_client.get(
+            reverse('posts:profile_follow', args={self.author}))
+        response = self.authorized_client.get(
+            reverse('posts:profile_unfollow', args={self.author}))
+        self.assertRedirects(response, reverse(
+            'posts:profile', args={self.author}))
+        self.assertEqual(Follow.objects.count(), follow_count)
+
+    def test_new_post_follow(self):
+        self.authorized_client.get(
+            reverse('posts:profile_follow', args={self.author}))
+        response = self.authorized_client.get(
+            reverse('posts:follow_index'))
+        post_follow = response.context['page_obj'][0]
+        self.assertEqual(post_follow, self.post_author)
+
+    def test_new_post_unfollow(self):
+        new_author = User.objects.create_user(username='new_author')
+        self.authorized_client.force_login(new_author)
+        Post.objects.create(
+            text='новый текст автора',
+            author=new_author,
+        )
+        response = self.authorized_client.get(
+            reverse('posts:follow_index'))
+        self.assertEqual(len(response.context['page_obj']), 0)

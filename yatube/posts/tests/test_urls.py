@@ -92,3 +92,16 @@ class PostURLTests(TestCase):
         for client, url, code in not_author_client_url_code:
             with self.subTest(url=url):
                 self.assertEqual(client.get(url).status_code, code)
+
+    def test_404_nonexistent_page(self):
+        """Проверка шаблона 404 для несуществующих страниц."""
+        url = '/unexpected_page/'
+        roles = (
+            self.guest_client,
+            self.author_client,
+        )
+        for role in roles:
+            with self.subTest(url=url):
+                response = role.get(url, follow=True)
+                self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+                self.assertTemplateUsed(response, 'core/404.html')
