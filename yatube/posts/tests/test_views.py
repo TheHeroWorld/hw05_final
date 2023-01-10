@@ -72,6 +72,7 @@ class TaskPagesTests(TestCase):
             self.POST_DETAIL_URL: 'posts/post_detail.html',
             POST_CREATE_URL: 'posts/create_post.html',
             self.POST_EDIT_URL: 'posts/create_post.html',
+            self.COMMENT_URL: 'includes/addcomment.html',
         }
         for reverse_name, template in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
