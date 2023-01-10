@@ -20,6 +20,7 @@ class Group(models.Model):
 
 
 class Post(CreatedModel):
+    TEXTMAX = 15
     text = models.TextField(verbose_name="Текст",
                             help_text="Придумайте текст для поста")
     author = models.ForeignKey(
@@ -49,10 +50,11 @@ class Post(CreatedModel):
         verbose_name = 'Посты'
 
     def __str__(self):
-        return self.text[:15]
+        return self.text[:self.TEXTMAX]
 
 
 class Comment(models.Model):
+    COMMENTMAX = 50
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -79,7 +81,7 @@ class Comment(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return self.text[:50]
+        return self.text[:self.COMMENTMAX]
 
 
 class Follow(models.Model):
@@ -95,3 +97,11 @@ class Follow(models.Model):
         related_name='following',
         help_text='Автор, на кого подписываются'
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_follows'
+            )
+        ]

@@ -164,11 +164,11 @@ class PaginatorViewsTest(TestCase):
     def setUp(self):
         """Создаем клиента и 15 постов."""
         self.client = Client()
-        self.number_create_posts = 15
+        self.NUMBER_CREATE_POSTS = 15
         posts = [Post(text=f'test_text_{i}',
                       author=self.author,
                       group=self.group)
-                 for i in range(self.number_create_posts)]
+                 for i in range(self.NUMBER_CREATE_POSTS)]
         self.posts = Post.objects.bulk_create(posts)
         self.second_page = Post.objects.count() % NUMBER_POST
 

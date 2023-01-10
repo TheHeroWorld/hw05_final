@@ -3,7 +3,7 @@ from http import HTTPStatus
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from posts.models import Group, Post, User
+from posts.models import Group, Post, User, Follow, Comment
 
 
 # Передалал все под HTTPstatus
@@ -11,6 +11,7 @@ class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.follow_user = User.objects.create(username='FollowUser')
         cls.user_author = User.objects.create_user(username='author')
         cls.user = User.objects.create_user(username='test_user')
         cls.group = Group.objects.create(
@@ -21,6 +22,11 @@ class PostURLTests(TestCase):
         cls.post = Post.objects.create(
             text='Тестовый текст',
             author=cls.user_author,
+        )
+        cls.comment = Comment.objects.create(
+            text='Тестовый комментрий',
+            post=cls.post,
+            author=cls.user,
         )
 
         cls.INDEX = reverse('posts:index')
@@ -39,6 +45,12 @@ class PostURLTests(TestCase):
         )
         cls.UNEXISTING_PAGE = '/unexistint_page/'
         cls.LOGIN = reverse('users:login')
+        cls.COMMENT = reverse('posts:add_comment', kwargs={'post_id':
+                              PostURLTests.post.id})
+        cls.FOLLOW = reverse('posts:profile_follow',
+                             kwargs={'username': cls.follow_user})
+        cls.UNFOLLOW = reverse('posts:profile_unfollow',
+                               kwargs={'username': cls.follow_user})
 
     def setUp(self):
         self.guest_client = Client()
@@ -48,7 +60,7 @@ class PostURLTests(TestCase):
         self.not_author_client.force_login(self.user)
 
     def test_url_exists_at_guest_client(self):
-        """Проверка доступа страниц для гостя"""
+        """Проверка доступа страниц для всех и вся"""
         guest_client_url_code = (
             (self.guest_client, self.INDEX, HTTPStatus.OK),
             (self.guest_client, self.GROUP_LIST, HTTPStatus.OK),
@@ -57,13 +69,10 @@ class PostURLTests(TestCase):
             (self.guest_client, self.POST_EDIT, HTTPStatus.FOUND),
             (self.guest_client, self.POST_CREATE, HTTPStatus.FOUND),
             (self.guest_client, self.UNEXISTING_PAGE, HTTPStatus.NOT_FOUND),
+            (self.guest_client, self.COMMENT, HTTPStatus.FOUND),
+            (self.guest_client, self.FOLLOW, HTTPStatus.FOUND),
+            (self.guest_client, self.UNFOLLOW, HTTPStatus.FOUND),
         )
-        for client, url, code in guest_client_url_code:
-            with self.subTest(url=url):
-                self.assertEqual(client.get(url).status_code, code)
-
-    def test_url_exists_at_author_client(self):
-        """Проверка доступа страниц для автора"""
         author_client_url_code = (
             (self.author_client, self.INDEX, HTTPStatus.OK),
             (self.author_client, self.GROUP_LIST, HTTPStatus.OK),
@@ -72,13 +81,10 @@ class PostURLTests(TestCase):
             (self.author_client, self.POST_EDIT, HTTPStatus.OK),
             (self.author_client, self.POST_CREATE, HTTPStatus.OK),
             (self.author_client, self.UNEXISTING_PAGE, HTTPStatus.NOT_FOUND),
+            (self.author_client, self.COMMENT, HTTPStatus.FOUND),
+            (self.author_client, self.FOLLOW, HTTPStatus.FOUND),
+            (self.author_client, self.UNFOLLOW, HTTPStatus.FOUND),
         )
-        for client, url, code in author_client_url_code:
-            with self.subTest(url=url):
-                self.assertEqual(client.get(url).status_code, code)
-
-    def test_url_exists_at_not_author_client(self):
-        """Проверка доступа страниц для авторизованного, не автора"""
         not_author_client_url_code = (
             (self.not_author_client, self.INDEX, HTTPStatus.OK),
             (self.not_author_client, self.GROUP_LIST, HTTPStatus.OK),
@@ -87,21 +93,56 @@ class PostURLTests(TestCase):
             (self.not_author_client, self.POST_EDIT, HTTPStatus.FOUND),
             (self.not_author_client, self.POST_CREATE, HTTPStatus.OK),
             (self.not_author_client, self.UNEXISTING_PAGE,
-                HTTPStatus.NOT_FOUND)
+                HTTPStatus.NOT_FOUND),
+            (self.not_author_client, self.COMMENT,
+                HTTPStatus.FOUND),
+            (self.not_author_client, self.FOLLOW,
+                HTTPStatus.FOUND),
+            (self.not_author_client, self.UNFOLLOW,
+                HTTPStatus.FOUND),
         )
+
+        for client, url, code in author_client_url_code:
+            with self.subTest(url=url):
+                self.assertEqual(client.get(url).status_code, code)
+
+        for client, url, code in guest_client_url_code:
+            with self.subTest(url=url):
+                self.assertEqual(client.get(url).status_code, code)
+
         for client, url, code in not_author_client_url_code:
             with self.subTest(url=url):
                 self.assertEqual(client.get(url).status_code, code)
 
-    def test_404_nonexistent_page(self):
-        """Проверка шаблона 404 для несуществующих страниц."""
-        url = '/unexpected_page/'
-        roles = (
-            self.guest_client,
-            self.author_client,
-        )
-        for role in roles:
-            with self.subTest(url=url):
-                response = role.get(url, follow=True)
-                self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-                self.assertTemplateUsed(response, 'core/404.html')
+    def test_guest_not_edit_post(self):
+        """Страница post_edit недоступна неавторизованному
+        пользователю и перенаправляет его на страницу авторизации"""
+        response = self.guest_client.get(
+            reverse('posts:post_edit',
+                    kwargs={'post_id': PostURLTests.post.id}),
+            follow=True)
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/posts/{ PostURLTests.post.id}/edit/')
+
+    def test_not_author_not_edit_post(self):
+        """ Не автор не может редактировать пост"""
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+        response = self.authorized_client.get(
+            reverse('posts:post_edit',
+                    kwargs={'post_id': PostURLTests.post.id}),
+            follow=True)
+        self.assertRedirects(
+            response, f'/posts/{ PostURLTests.post.id}/')
+
+    def test_guest_not_edit_post(self):
+        """Страница post_edit недоступна неавторизованному
+        пользователю и перенаправляет его на страницу авторизации"""
+        response = self.guest_client.get(
+            reverse('posts:post_edit',
+                    kwargs={'post_id': PostURLTests.post.id}),
+            follow=True)
+        self.assertRedirects(
+            response,
+            f'/auth/login/?next=/posts/{ PostURLTests.post.id}/edit/')

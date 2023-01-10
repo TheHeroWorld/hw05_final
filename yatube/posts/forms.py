@@ -10,6 +10,10 @@ class PostForm(forms.ModelForm):
             'text': 'Текст нового поста',
             'group': 'Группа, к которой будет относиться пост',
         }
+        labels = {
+            'text': ('текст'),
+            'group': ('группа'),
+        }
 
 
 class CommentForm(forms.ModelForm):

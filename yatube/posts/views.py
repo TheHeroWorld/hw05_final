@@ -3,28 +3,19 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_page
 
-from yatube.settings import NUMBER_POST
 from .models import Group, Post, User, Comment, Follow
 from .forms import PostForm, CommentForm
+from .utils import page_paginator
 
 CACHE_TIME = 20
 SELECT_LIMIT = 10
 
 
-def get_model_info(request, posts):
-    paginator = Paginator(posts, NUMBER_POST)
-    page_number = request.GET.get('page')
-    return paginator.get_page(page_number)
-
-
 @cache_page(CACHE_TIME)
 def index(request):
-    template = 'posts/index.html'
     posts = Post.objects.select_related('author', 'group')
-    context = {
-        'page_obj': get_model_info(request, posts),
-    }
-    return render(request, template, context)
+    return render(request, 'posts/index.html', {'page_obj':
+                  page_paginator(request, posts)})
 
 
 def group_posts(request, slug):
@@ -33,28 +24,25 @@ def group_posts(request, slug):
     posts = group.posts.select_related('author', 'group')
     context = {
         'group': group,
-        'page_obj': get_model_info(request, posts),
+        'page_obj': page_paginator(request, posts),
     }
     return render(request, template, context)
 
 
 def profile(request, username):
-    template = 'posts/profile.html'
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
     following = Follow.objects.filter(user=request.user.id, author=author)
-    context = {
-        'author': author,
-        'page_obj': get_model_info(request, posts),
-        'following': following
-    }
-    return render(request, template, context)
+    # Не совсем пойму что надо сделать
+    return render(request, 'posts/profile.html', {
+        'author': author, 'page_obj': page_paginator(request, posts),
+        'following': following})
 
 
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
     post = get_object_or_404(Post, pk=post_id)
-    comments = Comment.objects.filter(post=post)
+    comments = Comment.objects.select_related('post')
     form = CommentForm(request.POST or None)
     author = post.author.get_full_name()
     context = {
