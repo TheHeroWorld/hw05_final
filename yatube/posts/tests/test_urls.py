@@ -132,7 +132,7 @@ class PostURLTests(TestCase):
             follow=True)
         self.assertRedirects(
             response, f'/posts/{ PostURLTests.post.id}/')
-        
+
         """Страница post_edit недоступна неавторизованному
         пользователю и перенаправляет его на страницу авторизации"""
         response = self.guest_client.get(
