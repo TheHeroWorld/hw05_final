@@ -1,17 +1,6 @@
 from django.test import TestCase
 
-from ..models import Group, Post, User, Follow, Comment
-
-
-FIELD_VERBOSES = {"text": "Текст",
-                  "group": "Группа", }
-FIELD_HELP_TEXTS = {"text": "Придумайте текст для поста",
-                    "group": "Выберите группу"}
-FIELD_HELP_TEXTS_FOLLOW = {"user": "Подписчик, который подписывается",
-                           "author": 'Автор, на кого подписываются'}
-FIELD_VERBOSES_COMMENT = {"author": "Автор комментария",
-                          "text": 'Текст комментария'}
-FIELD_HELP_TEXTS_COMMENT = {"text": "Введите текст текст комментария"}
+from ..models import Group, Post, User, Comment
 
 
 class PostModelTest(TestCase):
@@ -41,38 +30,52 @@ class PostModelTest(TestCase):
         self.assertEqual(self.comment.text[:Comment.COMMENTMAX],
                          str(self.comment))
 
-    def test_help_text_name(self):
-        # Тут пока не знаю как сделать
-        """help_text полей text и group совпадает с ожидаемым"""
-        for value, expected in FIELD_HELP_TEXTS.items():
-            with self.subTest(value=value):
-                self.assertEqual(Post._meta.get_field(value).help_text,
-                                 expected)
-
-    def test_help_text_name_follow(self):
-        """help_text полей FOLLOW совпадает с ожидаемым"""
-        for value, expected in FIELD_HELP_TEXTS_FOLLOW.items():
-            with self.subTest(value=value):
-                self.assertEqual(Follow._meta.get_field(value).help_text,
-                                 expected)
-
-    def test_help_text_name_comment(self):
-        """help_text полей comment совпадает с ожидаемым"""
-        for value, expected in FIELD_HELP_TEXTS_COMMENT.items():
-            with self.subTest(value=value):
-                self.assertEqual(Comment._meta.get_field(value).help_text,
-                                 expected)
-
     def test_verbose_name(self):
-        """verbose_name полей text и group совпадает с ожидаемым"""
-        for value, expected in FIELD_VERBOSES.items():
-            with self.subTest(expected=expected):
-                self.assertEqual(Post._meta.get_field(value).verbose_name,
-                                 expected)
+        """verbose_name в полях совпадает с ожидаемым."""
+        field_verboses = {
+            'self.post': {
+                'text': 'Текст поста',
+                'pub_date': 'Дата публикации',
+                'author': 'Автор',
+                'group': 'Группа'
+            },
+            'self.comment': {
+                'text': 'Текст комментария',
+                'author': 'Автор',
+                'created': 'Дата публикации',
+            }
+        }
+        for field, expected_value in field_verboses.items():
+            with self.subTest(field=field):
+                if field == self.post:
+                    self.assertEqual(
+                        field._meta.get_field(field).verbose_name,
+                        expected_value
+                    )
+                if field == self.comment:
+                    self.assertEqual(
+                        self.comment._meta.get_field(field).verbose_name,
+                        expected_value
+                    )
 
-    def test_verbose_name_follow(self):
-        """verbose_name полей  совпадает с ожидаемым"""
-        for value, expected in FIELD_VERBOSES_COMMENT .items():
-            with self.subTest(expected=expected):
-                self.assertEqual(Comment._meta.get_field(value).verbose_name,
-                                 expected)
+    def test_help_text(self):
+        """help_text в полях совпадает с ожидаемым."""
+        field_help_texts = {
+            'self.post': {
+                'text': 'Введите текст поста',
+                'group': 'Группа, к которой будет относиться пост',
+            },
+            'self.comment': {
+                'text': 'Введите текст комментария',
+            }
+        }
+        for field, expected_value in field_help_texts.items():
+            with self.subTest(field=field):
+                if field == self.post:
+                    self.assertEqual(
+                        self.post._meta.get_field(field).help_text,
+                        expected_value)
+                if field == self.comment:
+                    self.assertEqual(
+                        self.comment._meta.get_field(field).help_text,
+                        expected_value)
