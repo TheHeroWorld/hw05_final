@@ -28,13 +28,21 @@ class PostModelTest(TestCase):
             author=cls.user,
             text='Тестовый пост',
         )
+        cls.comment = Comment.objects.create(
+            post=cls.post,
+            author=cls.user,
+            text='Комментарий ' * 10,
+        )
 
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
         self.assertEqual(self.post.text[:Post.TEXTMAX], str(self.post))
         self.assertEqual(self.group.title, str(self.group))
+        self.assertEqual(self.comment.text[:Comment.COMMENTMAX],
+                         str(self.comment))
 
     def test_help_text_name(self):
+        # Тут пока не знаю как сделать
         """help_text полей text и group совпадает с ожидаемым"""
         for value, expected in FIELD_HELP_TEXTS.items():
             with self.subTest(value=value):

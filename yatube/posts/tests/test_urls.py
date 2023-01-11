@@ -14,6 +14,11 @@ class PostURLTests(TestCase):
         cls.follow_user = User.objects.create(username='FollowUser')
         cls.user_author = User.objects.create_user(username='author')
         cls.user = User.objects.create_user(username='test_user')
+        cls.guest_client = Client()
+        cls.author_client = Client()
+        cls.author_client.force_login(cls.user_author)
+        cls.not_author_client = Client()
+        cls.not_author_client.force_login(cls.user)
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test_slug',
@@ -51,13 +56,6 @@ class PostURLTests(TestCase):
                              kwargs={'username': cls.follow_user})
         cls.UNFOLLOW = reverse('posts:profile_unfollow',
                                kwargs={'username': cls.follow_user})
-
-    def setUp(self):
-        self.guest_client = Client()
-        self.author_client = Client()
-        self.author_client.force_login(self.user_author)
-        self.not_author_client = Client()
-        self.not_author_client.force_login(self.user)
 
     def test_url_exists_at_guest_client(self):
         """Проверка доступа страниц для всех и вся"""
@@ -125,7 +123,6 @@ class PostURLTests(TestCase):
             response,
             f'/auth/login/?next=/posts/{ PostURLTests.post.id}/edit/')
 
-    def test_not_author_not_edit_post(self):
         """ Не автор не может редактировать пост"""
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
@@ -135,8 +132,7 @@ class PostURLTests(TestCase):
             follow=True)
         self.assertRedirects(
             response, f'/posts/{ PostURLTests.post.id}/')
-
-    def test_guest_not_edit_post(self):
+        
         """Страница post_edit недоступна неавторизованному
         пользователю и перенаправляет его на страницу авторизации"""
         response = self.guest_client.get(

@@ -29,20 +29,6 @@ class PostFormTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.auth_user = User.objects.create_user(username=AUTHOR_USERNAME)
-        cls.small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        cls.uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=cls.small_gif,
-            content_type='image/gif'
-        )
-
         cls.group = Group.objects.create(
             title=GROUP_TITLE,
             slug=SLUG,
@@ -74,10 +60,23 @@ class PostFormTest(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_create_post(self):
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=small_gif,
+            content_type='image/gif'
+        )
         """Валидная форма создает запись в Post."""
         form_data = {'text': 'Тестовый текст',
                      'group': self.group.id,
-                     'image': self.uploaded,
+                     'image': uploaded,
                      }
         response = self.author_client.post(POST_CREATE_URL, data=form_data,
                                            follow=True)
@@ -90,9 +89,17 @@ class PostFormTest(TestCase):
         self.assertEqual(Post.objects.count(), 2)
 
     def test_post_edit(self):
+        small_gif1 = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
         uploaded_edit = SimpleUploadedFile(
             name='small1.gif',
-            content=self.small_gif,
+            content=small_gif1,
             content_type='image/gif'
         )
         """Валидная форма обновляет выбранный пост."""

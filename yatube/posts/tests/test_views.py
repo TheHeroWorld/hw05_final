@@ -28,6 +28,7 @@ GROUP_LIST_URL = reverse("posts:group_list", args=[TEXT_TEST["SLUG"]])
 GROUP_TEST = reverse('posts:group_list', kwargs={'slug': TEXT_TEST["SLUG"]})
 PROFILE_TEST = reverse('posts:profile', kwargs={'username': 'auth'})
 INDEX_URL = reverse("posts:index")
+FOLLOW_INDEX = reverse("posts:follow_index")
 PROFILE_URL = reverse("posts:profile", args=[TEXT_TEST["AUTHOR_USERNAME"]])
 
 
@@ -72,6 +73,7 @@ class TaskPagesTests(TestCase):
             self.POST_DETAIL_URL: 'posts/post_detail.html',
             POST_CREATE_URL: 'posts/create_post.html',
             self.POST_EDIT_URL: 'posts/create_post.html',
+            FOLLOW_INDEX: 'posts/follow.html',
         }
         for reverse_name, template in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
@@ -154,6 +156,7 @@ class PaginatorViewsTest(TestCase):
     def setUpClass(cls):
         """Создаем автора и группу."""
         super().setUpClass()
+        cls.NUMBER_CREATE_POSTS = 15
         cls.author = User.objects.create_user(username='author_1')
         cls.group = Group.objects.create(
             title='Тестовая группа',
@@ -164,7 +167,6 @@ class PaginatorViewsTest(TestCase):
     def setUp(self):
         """Создаем клиента и 15 постов."""
         self.client = Client()
-        self.NUMBER_CREATE_POSTS = 15
         posts = [Post(text=f'test_text_{i}',
                       author=self.author,
                       group=self.group)
