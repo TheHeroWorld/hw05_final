@@ -32,8 +32,11 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
-    following = Follow.objects.filter(user=request.user.id, author=author)
-    # Не совсем пойму что надо сделать
+    following = (
+        request.user.is_authenticated
+        and request.user != author
+        and request.user.follower.filter(author=author).exists()
+    )
     return render(request, 'posts/profile.html', {
         'author': author, 'page_obj': page_paginator(request, posts),
         'following': following})
@@ -42,14 +45,12 @@ def profile(request, username):
 def post_detail(request, post_id):
     template = 'posts/post_detail.html'
     post = get_object_or_404(Post, pk=post_id)
-    comments = Comment.objects.select_related('post')
+    comments = post.comments.all()
     form = CommentForm(request.POST or None)
-    author = post.author.get_full_name()
     context = {
         'post': post,
         'form': form,
         'comments': comments,
-        'author': author
     }
     return render(request, template, context)
 
@@ -102,7 +103,7 @@ def follow_index(request):
     paginator = Paginator(posts_list, SELECT_LIMIT)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    context = {'page_obj': page_obj}
+    context = {'page_obj': page_paginator(request, posts_list),}
     return render(request, 'posts/follow.html', context)
 
 

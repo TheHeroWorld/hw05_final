@@ -33,13 +33,13 @@ class PostModelTest(TestCase):
     def test_verbose_name(self):
         """verbose_name в полях совпадает с ожидаемым."""
         field_verboses = {
-            'self.post': {
+            'Post': {
                 'text': 'Текст поста',
                 'pub_date': 'Дата публикации',
                 'author': 'Автор',
                 'group': 'Группа'
             },
-            'self.comment': {
+            'Comment': {
                 'text': 'Текст комментария',
                 'author': 'Автор',
                 'created': 'Дата публикации',
@@ -61,11 +61,11 @@ class PostModelTest(TestCase):
     def test_help_text(self):
         """help_text в полях совпадает с ожидаемым."""
         field_help_texts = {
-            'self.post': {
+            'Post': {
                 'text': 'Введите текст поста',
                 'group': 'Группа, к которой будет относиться пост',
             },
-            'self.comment': {
+            'Comment': {
                 'text': 'Введите текст комментария',
             }
         }
