@@ -8,6 +8,9 @@
       <li class="list-group-item">
         <h6>Количество подписчиков: {{ following_count }}</h6>
       </li>
+      <li class="list-group-item">
+        <h5>Комментариев {{ author.comments.count }} </h5>
+      </li>
       {% if user == author %}
       <li class="list-group-item">
         <h5>Подписан на {{ follower_count }} авторов</h5>
