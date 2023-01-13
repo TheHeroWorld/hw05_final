@@ -5,6 +5,14 @@
     <div class="mb-5">        
       <h1>Все посты пользователя {{ author.get_full_name }} </h1>
       <h3>Всего постов {{ author.posts.count }}</h3>
+      <li class="list-group-item">
+        <h6>Количество подписчиков: {{ following_count }}</h6>
+      </li>
+      {% if user == author %}
+      <li class="list-group-item">
+        <h5>Подписан на {{ follower_count }} авторов</h5>
+      </li>
+        {% else %}
        {% if user.is_authenticated and user != author %}
         {% if following %}
         <a class="btn btn-lg btn-light"
@@ -15,6 +23,7 @@
             class="btn btn-lg btn-primary"
             href="{% url 'posts:profile_follow' author.username %}" role="button"> Подписаться
             </a>
+            {% endif %}
         {% endif %} 
       {% endif %} 
   </div>

@@ -31,14 +31,23 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
+    self_follow = False
     following = (
         request.user.is_authenticated
         and request.user != author
         and request.user.follower.filter(author=author).exists()
     )
-    return render(request, 'posts/profile.html', {
-        'author': author, 'page_obj': page_paginator(request, posts),
-        'following': following})
+    follower_count = author.follower.count()
+    following_count = author.following.count()
+    context = {
+        'author': author,
+        'follower_count': follower_count,
+        'following_count': following_count,
+        'following': following,
+        'self_follow': self_follow,
+        'page_obj': page_paginator(request, posts)
+    }
+    return render(request, 'posts/profile.html', context)
 
 
 def post_detail(request, post_id):
@@ -85,7 +94,6 @@ def post_edit(request, post_id):
 @login_required
 def add_comment(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
-    # Получите пост и сохраните его в переменную post.
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)

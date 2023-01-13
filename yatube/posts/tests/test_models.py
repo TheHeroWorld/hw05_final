@@ -47,7 +47,7 @@ class PostModelTest(TestCase):
         }
         for field, expected_value in field_verboses.items():
             with self.subTest(field=field):
-                if field == self.post:
+                if field == Post:
                     self.assertEqual(
                         field._meta.get_field(field).verbose_name,
                         expected_value
@@ -71,7 +71,7 @@ class PostModelTest(TestCase):
         }
         for field, expected_value in field_help_texts.items():
             with self.subTest(field=field):
-                if field == self.post:
+                if field == Post:
                     self.assertEqual(
                         self.post._meta.get_field(field).help_text,
                         expected_value)
